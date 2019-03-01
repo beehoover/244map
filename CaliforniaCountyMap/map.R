@@ -8,7 +8,14 @@
 #
 
 library(shiny)
+library(tidyverse)
+library(sf)
+library(shinythemes)
+library(tmap)
+library(leaflet)
 
+ca_tidy<-read_sf(dsn = ".", layer = "county_tidy") # Read data
+st_crs(ca_tidy) = 4326 
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -41,32 +48,27 @@ ui <- fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output) {
    
-  select_demo <- reactive({
-    select_demo <- ca_demo %>% 
-      filter(attribute == input$attributes) %>% 
-      select(geometry)
-    select_demo
-  })
+
   
-  name_demo <- reactive({
-    name_demo <- ca_demo %>% 
-      filter(attribute == input$attributes) %>% 
-      select(NAME)
-    name_demo
-  })
   
   output$mymap <- renderLeaflet({
-    leaflet(ca_counties) %>%
+    
+      select_demo <- ca_tidy %>% 
+        filter(attribute %in% input$attributes) 
+
+    
+    leaflet() %>%
       addTiles() %>%
-      addPolygons(data=select_demo(), 
+      addPolygons(data=select_demo, 
                  color = "red") %>% 
-      addPolylines(data=geometry,
+      addPolylines(data=ca_tidy$geometry,
                    weight = 2,
                    opacity = 1,
                    color = "white",
                    dashArray = "3",
                    fillOpacity = 0.7
-                   ) 
+                   )  
+      
   })
 }
 

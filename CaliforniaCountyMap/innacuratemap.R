@@ -8,6 +8,7 @@
 #
 
 library(shiny)
+library(leaflet)
 library(shinyWidgets)
 
 # Define UI for application that draws a histogram

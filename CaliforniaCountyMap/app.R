@@ -1,76 +1,61 @@
-#
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    http://shiny.rstudio.com/
-#
-
 library(shiny)
-library(shinyWidgets)
+library(leaflet)
 
-# Define UI for application that draws a histogram
+geodata <- paste(readLines(system.file("examples/test.json", package = "leaflet")), collapse = "\n")
+
 ui <- fluidPage(
-   
-   # Application title
-   titlePanel("Where 2 Next?"),
-   
-   # Sidebar with a slider input for number of bins 
-   sidebarLayout(
-     sidebarPanel(
-       checkboxGroupInput("attributes",
-                          label = h3("Things I Look For:"),
-                          c("Diversity" = "div", 
-                            "Recreation" = "rec", 
-                            "Entertainment" = "ent", 
-                            "Coastline" = "coast"),
-                          selected = "div")
-       
-       
-     ),
-     
-      
-      # Show a plot of the generated distribution
-      mainPanel(
-        leafletOutput("mymap")
-      )
-   )
+  leafletOutput("map1"),
+  checkboxInput("addMarker", "Add marker on click"),
+  actionButton("clearMarkers", "Clear all markers"),
+  textOutput("message", container = h3)
 )
 
-# Define server logic required to draw a histogram
-server <- function(input, output) {
-   
-  select_demo <- reactive({
-    select_demo <- ca_demo %>% 
-      filter(attribute == input$attributes) %>% 
-      select(geometry)
-    select_demo
+server <- function(input, output, session) {
+  v <- reactiveValues(msg = "")
+  
+  output$map1 <- renderLeaflet({
+    leaflet() %>%
+      addGeoJSON(geodata) %>%
+      addCircles(-60, 60, radius = 5e5, layerId = "circle") %>%
+      fitBounds(-87.1875, 71.4131, 128.3203, 0.3515)
   })
   
-  name_demo <- reactive({
-    name_demo <- ca_demo %>% 
-      filter(attribute == input$attributes) %>% 
-      select(NAME)
-    name_demo
+  observeEvent(input$map1_geojson_mouseover, {
+    v$msg <- paste("Mouse is over", input$map1_geojson_mouseover$featureId)
+  })
+  observeEvent(input$map1_geojson_mouseout, {
+    v$msg <- ""
+  })
+  observeEvent(input$map1_geojson_click, {
+    v$msg <- paste("Clicked on", input$map1_geojson_click$featureId)
+  })
+  observeEvent(input$map1_shape_mouseover, {
+    v$msg <- paste("Mouse is over shape", input$map1_shape_mouseover$id)
+  })
+  observeEvent(input$map1_shape_mouseout, {
+    v$msg <- ""
+  })
+  observeEvent(input$map1_shape_click, {
+    v$msg <- paste("Clicked shape", input$map1_shape_click$id)
+  })
+  observeEvent(input$map1_click, {
+    v$msg <- paste("Clicked map at", input$map1_click$lat, "/", input$map1_click$lng)
+    if (input$addMarker) {
+      leafletProxy("map1") %>%
+        addMarkers(lng = input$map1_click$lng, lat = input$map1_click$lat)
+    }
+  })
+  observeEvent(input$map1_zoom, {
+    v$msg <- paste("Zoom changed to", input$map1_zoom)
+  })
+  observeEvent(input$map1_bounds, {
+    v$msg <- paste("Bounds changed to", paste(input$map1_bounds, collapse = ", "))
+  })
+  observeEvent(input$clearMarkers, {
+    leafletProxy("map1") %>% clearMarkers()
   })
   
-  output$mymap <- renderLeaflet({
-    leaflet(ca_counties) %>%
-      addTiles() %>%
-      addPolygons(data=select_demo(), 
-                 color = "red") %>% 
-      addPolylines(data=ca_counties$geometry,
-                   weight = 2,
-                   opacity = 1,
-                   color = "white",
-                   dashArray = "3",
-                   fillOpacity = 0.7
-                   ) 
-  })
+  output$message <- renderText(v$msg)
 }
 
-
-# Run the application 
-shinyApp(ui = ui, server = server)
-
+shinyApp(ui, server)

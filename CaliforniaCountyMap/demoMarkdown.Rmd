@@ -30,19 +30,20 @@ ca_dams <- read_sf(dsn = ".", layer = "California_Jurisdictional_Dams") %>% # Re
 ```
 
 ```{r pressure, echo=FALSE}
-demo_og<-read_csv("attributes_demo.csv")
-demo_og<-demo_og %>% 
- mutate(div=ifelse(div_index>.6,1,0)) %>% 
+library(tidyverse)
+attributes_demo <- read_csv("attributes_demo.csv")
+demo_og<-attributes_demo %>% 
+  mutate(div=ifelse(div_index>.6,1,0)) %>% 
   select(county,ent,rec,coast,div) %>% 
   gather(attribute, frequency, -county) %>% 
   filter(frequency>0)
 
 a<-as.factor(demo_og$county)
-colnames(demo)[1]<-"NAME"
+colnames(demo_og)[1]<-"NAME"
 ```
 
 ```{r}
-ca_demo<-merge(ca_counties, demo, by="NAME", all.x=TRUE)
+ca_demo<-merge(ca_counties, demo_og, by="NAME", all.x=TRUE)
 colnames(ca_counties)
 ```
 
